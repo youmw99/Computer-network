@@ -1,0 +1,149 @@
+#include <winsock2.h> //  socket API 사용 !!  
+#include <stdio.h>
+
+// ws2_32.lib 추가 
+#pragma comment(lib,"ws2_32.lib")
+#pragma warning( disable : 4996 )
+
+#define MAX_SOCKET 16
+//클라이언트 정보 구조체 !! 
+struct SOCKET_INFO
+{
+    char nickname[32];
+    SOCKET ClientSocket;
+    SOCKADDR_IN ClientAddr;
+    int AddrLen;
+};
+
+// 클라이언트 소켓의 배열 !! 
+SOCKET_INFO SockList[MAX_SOCKET];
+int count = 0;
+
+// Thread동기화 !! 
+// --> 여러개의 쓰레드가 공유자원의 접근하여 사용하는 경우
+// --> 임계영역을 생성해서 공유자원에 대한 보호를 수행해야 한다 !! 
+CRITICAL_SECTION cs;
+
+
+
+
+
+
+//Echo Server Thread함수 
+DWORD EchoThread(LPVOID p)
+{
+    SOCKET ClientSocket = (SOCKET)p;
+
+    char buf[32] = "";
+    while (1)
+    {
+        recv(ClientSocket, buf, 32, 0);
+        printf("[msg] : %s\n", buf);
+
+        EnterCriticalSection(&cs);
+        for (int i = 0; i < count; i++)
+        {
+            if (ClientSocket != SockList[i].ClientSocket)
+            {
+                send(SockList[i].ClientSocket, buf, 32, 0);
+            }
+        }
+        LeaveCriticalSection(&cs);
+    }
+    return 0;
+}
+
+
+// socket 기본 코드 
+void main()
+{
+    InitializeCriticalSection(&cs);
+
+    WSADATA wsa;
+
+    // 1.  winsock dll 로딩 !! 
+    if (WSAStartup(MAKEWORD(2, 2), &wsa) != 0)
+    {
+        puts("WSAStartup() error !!");
+        return;
+    }
+    //2. socket 생성 ( 핸드폰 단말기)
+    // --> 서버에서 접속을 대기할 소켓 !! 
+    SOCKET ListenSocket =
+        socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+    if (ListenSocket == INVALID_SOCKET)
+    {
+        puts("socket() error !!");
+        return;
+    }
+    // 소켓 핸들 확인 !! 
+    printf("ListenSocket: %d\n", ListenSocket);
+
+    //2. 주소 구조체 ( 유심 ) 
+    // --> 통신에 필요한 주소정보를 갖는 구조체 !! 
+    SOCKADDR_IN ServerAddr;
+    ServerAddr.sin_family = AF_INET;
+    ServerAddr.sin_port = htons(8000);
+    ServerAddr.sin_addr.s_addr = htonl(INADDR_ANY);
+
+    // socket(핸드폰) + sockaddr(유심)  
+    // socket과 주소 구조체를 연결 !! 
+    if (bind(ListenSocket,
+        (SOCKADDR*)&ServerAddr,
+        sizeof(ServerAddr)) == SOCKET_ERROR)
+    {
+        puts("bind() error !!");
+        return;
+
+    }
+    // 접속 대기 상태 !! 
+    if (listen(ListenSocket, SOMAXCONN) == SOCKET_ERROR)
+    {
+        puts("Listen Error !! ");
+        return;
+    }
+    //  접속 처리 !! 
+    SOCKADDR_IN ClientAddr; // 접속한 클라이언트의 주소정보 !! 
+    int len = sizeof(ClientAddr);
+    // 접속한 클라이언트의 소켓을 리턴 !! 
+
+    while (1)
+    {
+        if (count < MAX_SOCKET - 1)
+        {
+            SockList[count].AddrLen = sizeof(SockList[count].ClientAddr);
+
+
+            // 임계영역 시작 !! 
+            EnterCriticalSection(&cs);
+
+            SockList[count].ClientSocket =
+                accept(ListenSocket,    //대기 소켓 
+                (SOCKADDR*)&SockList[count].ClientAddr, // 클라이언트의 주소값을 가져올 
+                    &SockList[count].AddrLen); // 주소의 크기 !! 
+                //=================================================
+            // 임계 영역의 끝을 설정 !! 
+            LeaveCriticalSection(&cs);
+
+            printf("[ %s ]: %d 접속\n",
+                inet_ntoa(SockList[count].ClientAddr.sin_addr), //IP
+                SockList[count].ClientAddr.sin_port);
+
+            // 다중 접속 에코 서버 !! 
+            // --> 여러명이 전속해서 ECHO 기능을 서비스하는 서버 !!
+            // --> 클라이언트가 접속하면 클라이언트에 서비스 제공 스레드 생성 
+            CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)EchoThread,
+                (LPVOID)SockList[count].ClientSocket, 0, NULL);
+            
+            EnterCriticalSection(&cs);
+            count++;
+            LeaveCriticalSection(&cs);
+        }
+
+    }
+
+    //=================================================
+    // winsock dll 언로딩 !! 
+    WSACleanup();
+
+}end

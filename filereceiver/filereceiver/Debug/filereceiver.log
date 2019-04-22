@@ -1,0 +1,3 @@
+﻿  FileServer.cpp
+c:\users\youmw\source\repos\filereceiver\filereceiver\common.h(15): warning C4091: 'typedef ': 변수를 선언하지 않으면 'FILE_INFO' 왼쪽은 무시됩니다.
+  filereceiver.vcxproj -> C:\Users\youmw\source\repos\filereceiver\Debug\filereceiver.exe
