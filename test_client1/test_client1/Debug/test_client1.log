@@ -1,0 +1,5 @@
+﻿  File_client.cpp
+c:\users\youmw\source\repos\test_client1\test_client1\common.h(21): warning C4091: 'typedef ': 변수를 선언하지 않으면 'FILE_INFO' 왼쪽은 무시됩니다.
+c:\users\youmw\source\repos\test_client1\test_client1\common.h(26): warning C4091: 'typedef ': 변수를 선언하지 않으면 'SOCKET_INFO' 왼쪽은 무시됩니다.
+c:\users\youmw\source\repos\test_client1\test_client1\common.h(30): warning C4091: 'typedef ': 변수를 선언하지 않으면 'FILE_LIST' 왼쪽은 무시됩니다.
+  test_client1.vcxproj -> C:\Users\youmw\source\repos\test_client1\Debug\test_client1.exe
