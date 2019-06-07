@@ -11,10 +11,6 @@ int list_count = 0;
 char buf[BUF_STAND] = { 0 };
 FILE_INFO file_info;
 
-LPVOID doListThread(LPVOID p);
-void ShowList(SOCKET p);
-void FileSend(SOCKET p);
-
 int main(void) {
 	WSADATA wsa;
 	//winsock dll 로딩
