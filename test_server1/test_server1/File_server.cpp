@@ -1,5 +1,5 @@
 //==================================================================================================
-// -- 201343007_À¯¹Î¿ì_³×Æ®¿öÅ©_ÃÖÁ¾°úÁ¦
+// -- 201343007_ìœ ë¯¼ìš°_ë„¤íŠ¸ì›Œí¬_ìµœì¢…ê³¼ì œ
 //==================================================================================================
 
 #include "common.h"
@@ -10,6 +10,77 @@ FILE_LIST file_list[LIST_LIMIT];
 int list_count = 0;
 char buf[BUF_STAND] = { 0 };
 FILE_INFO file_info;
+
+LPVOID doListThread(LPVOID p);
+void ShowList(SOCKET p);
+void FileSend(SOCKET p)
+
+int main(void) {
+	WSADATA wsa;
+	//winsock dll ë¡œë”©
+	if (WSAStartup(MAKEWORD(2, 2), &wsa) != 0) {
+		puts("WSAStartup() error!!");
+		return 0;
+	}
+	//====================================================================
+	//socket ìƒì„±(í•¸ë“œí° ë‹¨ë§ê¸°)
+	SOCKET ListenSocket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+	//-->ì„œë²„ì—ì„œ ì ‘ì†ì„ ëŒ€ê¸°í•  ì†Œì¼“
+	if (ListenSocket == INVALID_SOCKET) {
+		puts("socket() error!");
+		return 0;
+	}
+	//ì†Œì¼“ í•¸ë“¤ í™•ì¸
+	printf("ListenSocket: %d\n", ListenSocket);
+
+	//ì£¼ì†Œ êµ¬ì¡°ì²´(ìœ ì‹¬)
+	//-->í†µì‹ ì— í•„ìš”í•œ ì£¼ì†Œì •ë³´ë¥¼ ê°–ëŠ” êµ¬ì¡°ì²´
+	SOCKADDR_IN ServerAddr;
+	ServerAddr.sin_family = AF_INET;
+	ServerAddr.sin_port = htons(8000);
+	ServerAddr.sin_addr.s_addr = htonl(INADDR_ANY);
+
+	//socket(í•¸ë“œí°)+sockaddr(ìœ ì‹¬)
+	//socketê³¼ êµ¬ì¡°ì²´ë¥¼ ì—°ê²°!
+	if (bind(ListenSocket, (SOCKADDR*)&ServerAddr, sizeof(ServerAddr)) == SOCKET_ERROR) {
+		puts("bind()error!");
+		return 0;
+	}
+	//ì ‘ì† ëŒ€ê¸° ìƒíƒœ
+	if (listen(ListenSocket, SOMAXCONN) == SOCKET_ERROR) {
+		puts("Listen error!");
+		return 0;
+	}
+	//ì ‘ì†ì²˜ë¦¬
+	SOCKADDR_IN ClientAddr;//ì ‘ì†í•œ í´ë¼ì´ì–¸íŠ¸ì˜ ì£¼ì†Œ
+	int len = sizeof(ClientAddr);
+	//ì ‘ì†í•œ í´ë¼ì´ì–¸íŠ¸ì˜ ì†Œì¼“ì„ ë¦¬í„´
+	while (1) {
+		SOCKET ClientSocket =
+			accept(ListenSocket,//ëŒ€ê¸°ì†Œì¼“
+			(SOCKADDR*)&ClientAddr,//í´ë¼ì´ì–¸íŠ¸ì˜ ì£¼ì†Œê°’ì„ ê°€ì ¸ì˜´
+				&len);//ì£¼ì†Œì˜ í¬ê¸°
+		Socketlist[SocketCount].ClientSocket = ClientSocket;
+		Socketlist[SocketCount].ClientAddr = ClientAddr;
+		SocketCount++;
+
+		if (ClientSocket == INVALID_SOCKET) {
+			puts("accept() error!");
+			return 0;
+		}
+		printf("ClientSocket : %d\n", ClientSocket);
+
+		//
+		printf("[ %s ]: %d ì ‘ì†\n", inet_ntoa(ClientAddr.sin_addr)//IPì–»ì–´ì˜´
+			, ClientAddr.sin_port);//portì–»ì–´ì˜´
+
+		CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)doListThread, (LPVOID)ClientSocket, 0, 0);
+	}
+
+	//====================================================================
+	WSACleanup();//winsock dll ì–¸ë¡œë”©
+	return 0;
+}
 
 LPVOID doListThread(LPVOID p) {
 
@@ -26,7 +97,7 @@ LPVOID doListThread(LPVOID p) {
 
 		recv(ClientSocket, (char*)&file_info, sizeof(FILE_INFO), 0);
 
-		//ÆÄÀÏ ¿­±â
+		//íŒŒì¼ ì—´ê¸°
 
 		FILE *fp = fopen(file_info.filename, "wb");
 		if (fp == NULL) {
@@ -57,7 +128,7 @@ LPVOID doListThread(LPVOID p) {
 		ShowList(ClientSocket);
 		recv(ClientSocket, buf, 1, 0);
 		FileSend(ClientSocket);
-		strcpy(buf, "´Ù¿î·Îµå°¡ ¿Ï·áµÇ¾ú½À´Ï´Ù.");
+		strcpy(buf, "ë‹¤ìš´ë¡œë“œê°€ ì™„ë£Œë˜ì—ˆìŠµë‹ˆë‹¤.");
 		send(ClientSocket, buf, BUF_STAND, 0);
 	}
 	else {
@@ -88,93 +159,26 @@ void FileSend(SOCKET p) {
 	FILE_INFO file_info;
 	int selected_num = atoi(buf);
 	strcpy(file_info.filename, file_list[selected_num-1].filename);
-	FILE * fp = fopen(file_info.filename, "rb");//ÆÄÀÏ ¿­±â
+	FILE * fp = fopen(file_info.filename, "rb");//íŒŒì¼ ì—´ê¸°
 	char file_buf[BUF_SIZE] = { 0 };
 	//====================================================================
-	fseek(fp, 0, SEEK_END);//ÆÄÀÏÀÇ ¸¶Áö¸·À¸·Î ÀÌµ¿
+	fseek(fp, 0, SEEK_END);//íŒŒì¼ì˜ ë§ˆì§€ë§‰ìœ¼ë¡œ ì´ë™
 	file_info.filesize = ftell(fp);
 
 	send(ClientSocket, (char*)&file_info, sizeof(file_info), 0);
 
-	rewind(fp);//ÆÄÀÏÀĞ±â À§Ä¡¸¦ Ã³À½À¸·Î
+	rewind(fp);//íŒŒì¼ì½ê¸° ìœ„ì¹˜ë¥¼ ì²˜ìŒìœ¼ë¡œ
 
 	int sendtotal = 0;
 
 	while (fread(file_buf, 1, BUF_SIZE, fp) != EOF && sendtotal <= file_info.filesize) {
 		int sent = send(ClientSocket, file_buf, BUF_SIZE, 0);
 		sendtotal += sent;
-	}//ÆÄÀÏ¿¡¼­ ¹ÙÀÌ³Ê¸® µ¥ÀÌÅÍ¸¦ ÀĞ¾î¿À±â!
+	}//íŒŒì¼ì—ì„œ ë°”ì´ë„ˆë¦¬ ë°ì´í„°ë¥¼ ì½ì–´ì˜¤ê¸°!
 
-	fclose(fp);//ÆÄÀÏ ´İ±â
+	fclose(fp);//íŒŒì¼ ë‹«ê¸°
 	char msg_buf[BUF_STAND] = { 0 };
-	strcpy(msg_buf, "´Ù¿î·Îµå ¿Ï·á");
+	strcpy(msg_buf, "ë‹¤ìš´ë¡œë“œ ì™„ë£Œ");
 	send(ClientSocket, msg_buf, BUF_STAND, 0);
 	return;
-}
-
-int main(void) {
-	WSADATA wsa;
-	//winsock dll ·Îµù
-	if (WSAStartup(MAKEWORD(2, 2), &wsa) != 0) {
-		puts("WSAStartup() error!!");
-		return 0;
-	}
-	//====================================================================
-	//socket »ı¼º(ÇÚµåÆù ´Ü¸»±â)
-	SOCKET ListenSocket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
-	//-->¼­¹ö¿¡¼­ Á¢¼ÓÀ» ´ë±âÇÒ ¼ÒÄÏ
-	if (ListenSocket == INVALID_SOCKET) {
-		puts("socket() error!");
-		return 0;
-	}
-	//¼ÒÄÏ ÇÚµé È®ÀÎ
-	printf("ListenSocket: %d\n", ListenSocket);
-
-	//ÁÖ¼Ò ±¸Á¶Ã¼(À¯½É)
-	//-->Åë½Å¿¡ ÇÊ¿äÇÑ ÁÖ¼ÒÁ¤º¸¸¦ °®´Â ±¸Á¶Ã¼
-	SOCKADDR_IN ServerAddr;
-	ServerAddr.sin_family = AF_INET;
-	ServerAddr.sin_port = htons(8000);
-	ServerAddr.sin_addr.s_addr = htonl(INADDR_ANY);
-
-	//socket(ÇÚµåÆù)+sockaddr(À¯½É)
-	//socket°ú ±¸Á¶Ã¼¸¦ ¿¬°á!
-	if (bind(ListenSocket, (SOCKADDR*)&ServerAddr, sizeof(ServerAddr)) == SOCKET_ERROR) {
-		puts("bind()error!");
-		return 0;
-	}
-	//Á¢¼Ó ´ë±â »óÅÂ
-	if (listen(ListenSocket, SOMAXCONN) == SOCKET_ERROR) {
-		puts("Listen error!");
-		return 0;
-	}
-	//Á¢¼ÓÃ³¸®
-	SOCKADDR_IN ClientAddr;//Á¢¼ÓÇÑ Å¬¶óÀÌ¾ğÆ®ÀÇ ÁÖ¼Ò
-	int len = sizeof(ClientAddr);
-	//Á¢¼ÓÇÑ Å¬¶óÀÌ¾ğÆ®ÀÇ ¼ÒÄÏÀ» ¸®ÅÏ
-	while (1) {
-		SOCKET ClientSocket =
-			accept(ListenSocket,//´ë±â¼ÒÄÏ
-			(SOCKADDR*)&ClientAddr,//Å¬¶óÀÌ¾ğÆ®ÀÇ ÁÖ¼Ò°ªÀ» °¡Á®¿È
-				&len);//ÁÖ¼ÒÀÇ Å©±â
-		Socketlist[SocketCount].ClientSocket = ClientSocket;
-		Socketlist[SocketCount].ClientAddr = ClientAddr;
-		SocketCount++;
-
-		if (ClientSocket == INVALID_SOCKET) {
-			puts("accept() error!");
-			return 0;
-		}
-		printf("ClientSocket : %d\n", ClientSocket);
-
-		//
-		printf("[ %s ]: %d Á¢¼Ó\n", inet_ntoa(ClientAddr.sin_addr)//IP¾ò¾î¿È
-			, ClientAddr.sin_port);//port¾ò¾î¿È
-
-		CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)doListThread, (LPVOID)ClientSocket, 0, 0);
-	}
-
-	//====================================================================
-	WSACleanup();//winsock dll ¾ğ·Îµù
-	return 0;
 }
