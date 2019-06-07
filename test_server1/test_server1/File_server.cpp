@@ -13,7 +13,7 @@ FILE_INFO file_info;
 
 LPVOID doListThread(LPVOID p);
 void ShowList(SOCKET p);
-void FileSend(SOCKET p)
+void FileSend(SOCKET p);
 
 int main(void) {
 	WSADATA wsa;
