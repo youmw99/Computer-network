@@ -6,9 +6,6 @@
 char buf[BUF_STAND] = { 0 };
 FILE_INFO file_info;
 
-void Upload(SOCKET p);
-int Download(const SOCKET &ClientSocket, bool &retflag);
-
 int main(void) {
 	WSADATA wsa;
 	//winsock dll 로딩
