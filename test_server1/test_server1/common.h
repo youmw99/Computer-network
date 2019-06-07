@@ -11,6 +11,7 @@
 #define BUF_STAND 255
 #define LIST_LIMIT 10
 
+LPVOID doListThread(LPVOID p);
 void FileSend(SOCKET p);
 void ShowList(SOCKET p);
 const LPVOID &Upload_To_Server(const SOCKET &ClientSocket);
