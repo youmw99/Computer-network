@@ -11,6 +11,7 @@
 #define BUF_STAND 255
 #define LIST_LIMIT 10
 
+void Upload(SOCKET p);
 int Download(const SOCKET &ClientSocket, bool &retflag);
 
 typedef struct FILE_INFO {
