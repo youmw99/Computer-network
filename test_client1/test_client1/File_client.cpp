@@ -1,40 +1,95 @@
 //==================================================================================================
-// -- 201343007_À¯¹Î¿ì_³×Æ®¿öÅ©_ÃÖÁ¾°úÁ¦
+// -- 201343007_ìœ ë¯¼ìš°_ë„¤íŠ¸ì›Œí¬_ìµœì¢…ê³¼ì œ
 //==================================================================================================
 #include "common.h"
 
 char buf[BUF_STAND] = { 0 };
 FILE_INFO file_info;
 
+void Upload(SOCKET p);
+int Download(const SOCKET &ClientSocket, bool &retflag);
+
+int main(void) {
+	WSADATA wsa;
+	//winsock dll ë¡œë”©
+	if (WSAStartup(MAKEWORD(2, 2), &wsa) != 0) {
+		puts("WSAStartup() error!!");
+		return 0;
+	}
+	//====================================================================
+	SOCKET ClientSocket
+		= socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+	if (ClientSocket == INVALID_SOCKET) {
+		puts("socket error!");
+		return 0;
+	}
+	//ì ‘ì†í•  ì„œë²„ì˜ ì£¼ì†Œ
+	SOCKADDR_IN ServerAddr;
+	ServerAddr.sin_port = htons(8000);
+	ServerAddr.sin_family = AF_INET;
+	ServerAddr.sin_addr.s_addr = inet_addr("127.0.0.1");
+
+	if (connect(ClientSocket, //í´ë¼ì´ì–¸íŠ¸ ì†Œì¼“
+		(SOCKADDR*)&ServerAddr, //ì ‘ì†í•  ì„œë²„ì£¼ì†Œ
+		sizeof(ServerAddr))//ì£¼ì†Œ í¬ê¸°
+		== SOCKET_ERROR) {
+		puts("connect error!");
+		return 0;
+	}
+	//Cì–¸ì–´ íŒŒì¼ ì…ì¶œë ¥
+
+	puts("ì–´ë–¤ ì‘ì—…ì„ ìˆ˜í–‰í•˜ì‹œê² ìŠµë‹ˆê¹Œ? 1.ì—…ë¡œë“œ 2.ë‹¤ìš´ë¡œë“œ");
+
+	char check_buf[BUF_STAND] = { getchar() };
+
+	send(ClientSocket, check_buf, BUF_STAND, 0);
+
+	if (check_buf[0] == '1') {
+		Upload(ClientSocket);
+	}
+	else if (check_buf[0] == '2') {
+		bool retflag;
+		int retval = Download(ClientSocket, retflag);
+		if (retflag) return retval;
+	}
+	else {
+		puts("ì˜ëª»ëœ ì ‘ê·¼ ê²½ë¡œì…ë‹ˆë‹¤. í”„ë¡œê·¸ë¨ì„ ë‹¤ì‹œ ì‹¤í–‰ì‹œì¼œì£¼ì„¸ìš”.");
+	}
+
+	//====================================================================
+	WSACleanup();//winsock dll ì–¸ë¡œë”©
+	return 0;
+}
+
 void Upload(SOCKET p) {
 	SOCKET ClientSocket = p;
 	recv(ClientSocket, buf, BUF_STAND, 0);
 	if (buf[0] == 's') {
 		strcpy(file_info.filename, "shinjuku1.jpg");
-		FILE * fp = fopen(file_info.filename, "rb");//ÆÄÀÏ ¿­±â
+		FILE * fp = fopen(file_info.filename, "rb");//íŒŒì¼ ì—´ê¸°
 		char file_buf[BUF_SIZE] = { 0 };
 		//====================================================================
-		fseek(fp, 0, SEEK_END);//ÆÄÀÏÀÇ ¸¶Áö¸·À¸·Î ÀÌµ¿
+		fseek(fp, 0, SEEK_END);//íŒŒì¼ì˜ ë§ˆì§€ë§‰ìœ¼ë¡œ ì´ë™
 		file_info.filesize = ftell(fp);
 
 		send(ClientSocket, (char*)&file_info, sizeof(file_info), 0);
 
-		rewind(fp);//ÆÄÀÏÀĞ±â À§Ä¡¸¦ Ã³À½À¸·Î
+		rewind(fp);//íŒŒì¼ì½ê¸° ìœ„ì¹˜ë¥¼ ì²˜ìŒìœ¼ë¡œ
 
 		int sendtotal = 0;
 
 		while (fread(file_buf, 1, BUF_SIZE, fp) != EOF && sendtotal <= file_info.filesize) {
 			int sent = send(ClientSocket, file_buf, BUF_SIZE, 0);
 			sendtotal += sent;
-		}//ÆÄÀÏ¿¡¼­ ¹ÙÀÌ³Ê¸® µ¥ÀÌÅÍ¸¦ ÀĞ¾î¿À±â!
+		}//íŒŒì¼ì—ì„œ ë°”ì´ë„ˆë¦¬ ë°ì´í„°ë¥¼ ì½ì–´ì˜¤ê¸°!
 
-		fclose(fp);//ÆÄÀÏ ´İ±â
+		fclose(fp);//íŒŒì¼ ë‹«ê¸°
 		recv(ClientSocket, buf, BUF_STAND, 0);
 		printf("%s\n", buf);
 	}
 	else if (buf[0] == 'f') {
-		puts("¾÷·Îµå ÇÒ °ø°£ÀÌ ºÎÁ·ÇÕ´Ï´Ù. ´Ù½Ã Á¢¼ÓÇØÁÖ¼¼¿ä.");
-		WSACleanup();//winsock dll ¾ğ·Îµù
+		puts("ì—…ë¡œë“œ í•  ê³µê°„ì´ ë¶€ì¡±í•©ë‹ˆë‹¤. ë‹¤ì‹œ ì ‘ì†í•´ì£¼ì„¸ìš”.");
+		WSACleanup();//winsock dll ì–¸ë¡œë”©
 		return;
 	}
 	return;
@@ -49,7 +104,7 @@ int Download(const SOCKET &ClientSocket, bool &retflag)
 		recv(ClientSocket, buf, BUF_STAND, 0);
 		printf("%d. %s\n", i + 1, buf);
 	}
-	puts("¸î ¹ø ÆÄÀÏÀ» ´Ù¿î·Îµå ÇÏ½Ã°Ú½À´Ï±î?");
+	puts("ëª‡ ë²ˆ íŒŒì¼ì„ ë‹¤ìš´ë¡œë“œ í•˜ì‹œê² ìŠµë‹ˆê¹Œ?");
 	fflush(stdin);
 	char d_buf[BUF_STAND];
 	scanf("%s", &d_buf);
@@ -62,7 +117,7 @@ int Download(const SOCKET &ClientSocket, bool &retflag)
 
 	recv(ClientSocket, (char*)&file_info, sizeof(FILE_INFO), 0);
 
-	//ÆÄÀÏ ¿­±â
+	//íŒŒì¼ ì—´ê¸°
 
 	FILE *fp = fopen(file_info.filename, "wb");
 	if (fp == NULL) {
@@ -82,57 +137,5 @@ int Download(const SOCKET &ClientSocket, bool &retflag)
 	recv(ClientSocket, msg_buf, BUF_STAND, 0);
 	puts(msg_buf);
 	retflag = false;
-	return 0;
-}
-
-int main(void) {
-	WSADATA wsa;
-	//winsock dll ·Îµù
-	if (WSAStartup(MAKEWORD(2, 2), &wsa) != 0) {
-		puts("WSAStartup() error!!");
-		return 0;
-	}
-	//====================================================================
-	SOCKET ClientSocket
-		= socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
-	if (ClientSocket == INVALID_SOCKET) {
-		puts("socket error!");
-		return 0;
-	}
-	//Á¢¼ÓÇÒ ¼­¹öÀÇ ÁÖ¼Ò
-	SOCKADDR_IN ServerAddr;
-	ServerAddr.sin_port = htons(8000);
-	ServerAddr.sin_family = AF_INET;
-	ServerAddr.sin_addr.s_addr = inet_addr("127.0.0.1");
-
-	if (connect(ClientSocket, //Å¬¶óÀÌ¾ğÆ® ¼ÒÄÏ
-		(SOCKADDR*)&ServerAddr, //Á¢¼ÓÇÒ ¼­¹öÁÖ¼Ò
-		sizeof(ServerAddr))//ÁÖ¼Ò Å©±â
-		== SOCKET_ERROR) {
-		puts("connect error!");
-		return 0;
-	}
-	//C¾ğ¾î ÆÄÀÏ ÀÔÃâ·Â
-
-	puts("¾î¶² ÀÛ¾÷À» ¼öÇàÇÏ½Ã°Ú½À´Ï±î? 1.¾÷·Îµå 2.´Ù¿î·Îµå");
-
-	char check_buf[BUF_STAND] = { getchar() };
-
-	send(ClientSocket, check_buf, BUF_STAND, 0);
-
-	if (check_buf[0] == '1') {
-		Upload(ClientSocket);
-	}
-	else if (check_buf[0] == '2') {
-		bool retflag;
-		int retval = Download(ClientSocket, retflag);
-		if (retflag) return retval;
-	}
-	else {
-		puts("Àß¸øµÈ Á¢±Ù °æ·ÎÀÔ´Ï´Ù. ÇÁ·Î±×·¥À» ´Ù½Ã ½ÇÇà½ÃÄÑÁÖ¼¼¿ä.");
-	}
-
-	//====================================================================
-	WSACleanup();//winsock dll ¾ğ·Îµù
 	return 0;
 }
